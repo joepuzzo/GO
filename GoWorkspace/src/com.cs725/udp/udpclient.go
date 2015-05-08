@@ -9,12 +9,6 @@ import (
 	"time"
 )
 
-func CheckError(err error) {
-	if err != nil {
-		fmt.Println("Error: ", err)
-	}
-}
-
 func main() {
 	var address string
 	fmt.Printf("Please enter an address or hostname: ")
@@ -36,10 +30,10 @@ func Connect2Server(srv_addr string, port string) {
 	defer conn.Close()
 
 	for {
-		//Random shit to write out
+		//Get Time now and build input and output buffers write out
 		t1 := time.Now().Nanosecond()
 		buf1 := []byte(strconv.Itoa(t1))
-		buf2 := make([]byte, 1500)
+		buf2 := make([]byte, 1500) //TODO Move this outside of loop mayb
 
 		//Write a value out the the server
 		_, err := conn.Write(buf1)
@@ -50,11 +44,15 @@ func Connect2Server(srv_addr string, port string) {
 			failed2connect()
 		}
 
+		//Set a read timeout value
+		conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+
 		//Get the data back from the server
 		n, _, err := conn.ReadFromUDP(buf2)
 		t4 := time.Now().Nanosecond()
 		if err != nil {
 			// handle error
+			fmt.Println("Connection Timed Out!")
 		} else {
 			t2, t3 := getData(string(buf2[0:n]))
 			timeandoffset(t1, t2, t3, t4)
@@ -67,7 +65,7 @@ func Connect2Server(srv_addr string, port string) {
 * This function will parse the given string as a json string
  */
 func getData(str string) (t2, t3 int) {
-	fmt.Println(str)
+	fmt.Println("Recieved: " + str)
 	type Message struct {
 		T2 int
 		T3 int
@@ -76,8 +74,6 @@ func getData(str string) (t2, t3 int) {
 	m := Message{}
 
 	json.Unmarshal([]byte(str), &m)
-	fmt.Println(m)
-	fmt.Printf("t2: %d, t3: %d\n", m.T2, m.T3)
 	t2 = m.T2
 	t3 = m.T3
 	return
@@ -99,5 +95,11 @@ func failed2connect() {
 	fmt.Scanf("%s", &ans)
 	if ans == "no" {
 		os.Exit(0)
+	}
+}
+
+func CheckError(err error) {
+	if err != nil {
+		fmt.Println("Error: ", err)
 	}
 }
